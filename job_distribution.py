@@ -22,6 +22,8 @@ class Dist:
         self.other_res_lower = 1
         self.other_res_upper = max_nw_size / 5
 
+        self.switch_chance = 0.05
+
     def normal_dist(self):
 
         # new work duration
@@ -73,6 +75,10 @@ def generate_sequence_work(pa, seed=42):
     for i in range(simu_len):
 
         if np.random.rand() < pa.new_job_rate:  # a new job comes
+
+            if pa.nonStationary: 
+                if np.random.rand() < pa.dist.switch_chance: # switch duration distribution
+                    pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
 
             nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
 

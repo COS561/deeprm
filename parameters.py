@@ -36,6 +36,8 @@ class Parameters:
 
         self.discount = 1           # discount factor
 
+        self.nonStationary = True      # if true, job duration distribution changes over time
+
         # distribution for new job arrival
         self.dist = job_distribution.Dist(self.num_res, self.max_job_size, self.max_job_len)
 
