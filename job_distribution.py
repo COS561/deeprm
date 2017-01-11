@@ -88,3 +88,28 @@ def generate_sequence_work(pa, seed=42):
                              [pa.num_ex, pa.simu_len, pa.num_res])
 
     return nw_len_seq, nw_size_seq
+
+def generate_sequence_for_rnn(pa, seed=42):
+
+    np.random.seed(seed)
+
+    simu_len = pa.simu_len
+
+    nw_dist = pa.dist.bi_model_dist
+
+    nw_seq = np.zeros((simu_len, pa.num_res + 1), dtype=int)
+    # print nw_seq
+
+    for i in range(simu_len):
+
+        if np.random.rand() < pa.new_job_rate:  # a new job comes
+
+            if pa.nonStationary:
+                if np.random.rand() < pa.dist.switch_chance: # switch duration distribution
+                    pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
+
+            nw_seq[i, 0], nw_seq[i, 1:] = nw_dist()
+
+    #print nw_seq
+
+    return nw_seq
