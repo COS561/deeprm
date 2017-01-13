@@ -32,7 +32,7 @@ class Parameters:
 
         self.job_num_cap = 40          # maximum number of distinct colors in current work graph
 
-        self.new_job_rate = 0.7        # lambda in new job arrival Poisson Process
+        self.new_job_rate = 1.0        # lambda in new job arrival Poisson Process
 
         self.discount = 1           # discount factor
 
