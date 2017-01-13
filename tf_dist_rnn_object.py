@@ -22,7 +22,7 @@ USAGE:
 
 class dist_rnn(object):
 
-    def __init__(self, forecast=50, pa=None, offset=1, noise=False, bimodal=False, periodic=True):
+    def __init__(self, forecast=50, seq_len=50, pa=None, offset=1, noise=False, bimodal=False, periodic=True):
 
         #self.INPUT_DIM = 1
         self.INPUT_DIM = 1
@@ -31,7 +31,7 @@ class dist_rnn(object):
         self.N_SEQS = 100000
         self.N_PRINT = 100
         self.BATCH_SIZE = 32
-        self.SEQ_LEN = 50
+        self.SEQ_LEN = seq_len
         self.NUM_TRAIN_STEP = 100000
         self.LEARNING_RATE = 0.01
         self.OFFSET = offset
