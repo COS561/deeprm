@@ -7,6 +7,7 @@ import parameters
 import pg_network
 import other_agents
 
+import copy
 
 def discount(x, gamma):
     """
@@ -77,6 +78,71 @@ def get_traj(test_type, pa, env, episode_max_length, pg_resume=None, render=Fals
     return np.array(rews), info
 
 
+def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, render=False):
+    """
+    Run agent-environment loop for one whole episode (trajectory)
+    Return dictionary of results
+    """
+
+    if test_type == 'PG':  # load trained parameters
+
+        pg_learner = pg_network.PGLearner(pa)
+
+        net_handle = open(pg_resume, 'rb')
+        net_params = cPickle.load(net_handle)
+        pg_learner.set_net_params(net_params)
+
+    env.reset()
+    rews = []
+
+    for te in xrange(episode_max_length):
+        ori_env = copy.deepcopy(env)
+        actions = []
+        future = min(episode_max_length - te, pa.simu_len)
+        rews_hals = np.zeros((pa.num_hal, future), dtype=float)
+
+        for h in range(pa.num_hal):
+            env = copy.deepcopy(ori_env)
+            ob = env.observe()
+
+            for th in range(future):
+
+                if test_type == 'PG':
+                    a = pg_learner.choose_action(ob)
+
+                elif test_type == 'Tetris':
+                    a = other_agents.get_packer_action(env.machine, env.job_slot)
+
+                elif test_type == 'SJF':
+                    a = other_agents.get_sjf_action(env.machine, env.job_slot)
+
+                elif test_type == 'Random':
+                    a = other_agents.get_random_action(env.job_slot)
+
+                if th == 0:
+                    actions.append(a)
+
+                ob, rew, done, info = env.step(a, repeat=True)
+
+                if done: break
+
+                rews_hals[h][th] = rew
+        
+        sum_rews = rews_hals.sum(axis=1, dtype=float)
+
+        a_best = actions[np.argmax(sum_rews)]
+        env = copy.deepcopy(ori_env)
+        ob, rew, done, info = env.step(a_best, repeat=True)
+
+        rews.append(rew)
+
+        if done: break
+        if render: env.render()
+        # env.render()
+
+    return np.array(rews), info
+
+
 def launch(pa, pg_resume=None, render=False, plot=False, repre='image', end='no_new_job'):
 
     # ---- Parameters ----
@@ -109,13 +175,26 @@ def launch(pa, pg_resume=None, render=False, plot=False, repre='image', end='no_
         print('\n\n')
         print("=============== " + str(seq_idx) + " ===============")
 
+        test_types = ['PG']
         for test_type in test_types:
 
+            print "Regular version"
             rews, info = get_traj(test_type, pa, env, pa.episode_max_length, pg_resume)
 
             print "---------- " + test_type + " -----------"
 
             print "total discount reward : \t %s" % (discount(rews, pa.discount)[0])
+
+            print " "
+            print "Hallucinated version"
+            rews, info = get_traj_halluc(test_type, pa, env, pa.episode_max_length, pg_resume)
+
+            print "---------- " + test_type + " -----------"
+
+            print "total discount reward : \t %s" % (discount(rews, pa.discount)[0])
+
+
+
 
             all_discount_rews[test_type].append(
                 discount(rews, pa.discount)[0]
