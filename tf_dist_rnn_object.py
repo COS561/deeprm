@@ -254,7 +254,7 @@ class dist_rnn(object):
                 s2_pred = tf.multinomial(s2_logits, 1)
                 s2_pred = tf.squeeze(s2_pred)
 
-            generated_forecast_seq = [len_pred, s1_pred, s2_pred]
+            generated_forecast_seq = [[len_pred, s1_pred, s2_pred]]
 
             for _ in range(self.FORECAST_LEN):
                 len_x = tf.expand_dims(tf.nn.embedding_lookup(self.len_embeddings, len_pred), 0)
@@ -337,10 +337,13 @@ class dist_rnn(object):
                 print([d[:][0] for d in self.s2_data])
 
                 print('----- forecast')
-                print(self.sample_forecast_with_starter_seq(
+                forecast = self.sample_forecast_with_starter_seq(
                     [d[:][0] for d in self.len_data],
                     [d[:][0] for d in self.s1_data],
-                    [d[:][0] for d in self.s2_data],))
+                    [d[:][0] for d in self.s2_data])
+                print([g[0] + 1 for g in forecast])
+                print([g[1] + 1 for g in forecast])
+                print([g[2] + 1 for g in forecast])
 
         self.trained = True
         self.training = False
