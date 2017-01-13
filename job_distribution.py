@@ -102,7 +102,7 @@ def generate_sequence_work(pa, seed=42):
 
             for j in range(pa.simu_len):
                 #generate length, size attributes of sequence j in cycle i:
-                pa.new_job_rate = 0.3
+
                 if np.random.rand() < pa.new_job_rate:
 
                     if pa.dist.bimodal:
@@ -118,29 +118,8 @@ def generate_sequence_work(pa, seed=42):
                         for k in range(pa.num_res):
                             nw_size_seq[i,j,k] = np.random.randint(1, pa.dist.max_nw_size + 1)
 
-    # for i in range(simu_len):
 
-    #     if np.random.rand() < pa.new_job_rate:  # a new job comes
-
-    #         periodic_dist = 0;
-
-    #         if periodic_dist:
-
-    #             nw_len_seq[i] = round(4*(math.sin(0.5*i) + math.cos(0.25*i))+8)
-
-    #             for j in range(pa.num_res):
-    #                 nw_size_seq[i,j] = np.random.randint(1, pa.dist.max_nw_size + 1)
-
-    #         else:
-
-    #             nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
-
-    # nw_len_seq = np.reshape(nw_len_seq,
-    #                         [pa.num_ex, pa.simu_len])
-    # nw_size_seq = np.reshape(nw_size_seq,
-    #                          [pa.num_ex, pa.simu_len, pa.num_res])
-
-    print nw_len_seq
+    #print nw_len_seq
     return nw_len_seq, nw_size_seq
 
 def generate_sequence_for_rnn(pa, seed=42):
