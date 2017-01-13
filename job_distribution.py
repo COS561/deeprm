@@ -124,7 +124,7 @@ def generate_sequence_work(pa, seed=42):
 
 def generate_sequence_for_rnn(pa, seed=42):
 
-    np.random.seed(seed)
+    #np.random.seed(seed)
 
     simu_len = pa.simu_len
 
@@ -133,15 +133,35 @@ def generate_sequence_for_rnn(pa, seed=42):
     nw_seq = np.zeros((simu_len, pa.num_res + 1), dtype=int)
     # print nw_seq
 
-    for i in range(simu_len):
+    if pa.dist.bimodal:
 
-        if np.random.rand() < pa.new_job_rate:  # a new job comes
+        if np.random.rand() < 0.5:
+            pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
 
-            if pa.nonStationary:
-                if np.random.rand() < pa.dist.switch_chance: # switch duration distribution
-                    pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
+    elif pa.dist.periodic:
+        pa.dist.job_period = np.random.randint(2, 10)
 
-            nw_seq[i, 0], nw_seq[i, 1:] = nw_dist()
+    for i in range(pa.simu_len):
+        # set parameters of length dist for cycle i:
+
+        # generate length, size attributes of sequence j in cycle i:
+
+        if pa.dist.bimodal:
+
+            nw_seq[i, 0], nw_seq[i, 1:] = pa.dist.bi_model_dist()
+
+        elif pa.dist.periodic:
+
+            # nw_len_seq[i,j] = round(4*(math.sin(0.5*j) + math.cos(0.25*j))+8)
+            if pa.dist.noise:
+                offset = np.random.randint(-2, 2)
+            else:
+                offset = 0
+
+            nw_seq[i, 0] = round(7 * (math.sin((i + offset) / pa.dist.job_period)) + 8)
+
+            for k in range(pa.num_res):
+                nw_seq[i, 1:] = np.random.randint(1, pa.dist.max_nw_size + 1)
 
     #print nw_seq
 
