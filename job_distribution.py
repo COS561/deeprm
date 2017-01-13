@@ -87,7 +87,7 @@ def generate_sequence_work(pa, seed=42):
 
     else:
 
-        for j in range(pa.simu_len):
+        for i in range(pa.num_ex):
             #set parameters of length dist for cycle i:
 
             if pa.dist.bimodal:
@@ -98,7 +98,7 @@ def generate_sequence_work(pa, seed=42):
             elif pa.dist.periodic:
                     pa.dist.job_period = np.random.randint(2, 10)
 
-            for i in range(pa.num_ex):
+            for j in range(pa.simu_len):
                 #generate length, size attributes of sequence j in cycle i:
 
                 if pa.dist.bimodal:
@@ -136,6 +136,7 @@ def generate_sequence_work(pa, seed=42):
     # nw_size_seq = np.reshape(nw_size_seq,
     #                          [pa.num_ex, pa.simu_len, pa.num_res])
 
+    print nw_len_seq
     return nw_len_seq, nw_size_seq
 
 def generate_sequence_for_rnn(pa, seed=42):
