@@ -10,9 +10,12 @@ import sys
 from job_distribution import *
 import parameters
 
+
+
+
 class dist_rnn(object):
 
-    def __init__(self, offset=1, pa=parameters.Parameters()):
+    def __init__(self, offset=1, pa=None):
 
         self.INPUT_DIM = 1
         self.CELL_DIM = 16
@@ -23,11 +26,15 @@ class dist_rnn(object):
         self.NUM_TRAIN_STEP = 10000
         self.LEARNING_RATE = 0.01
         self.OFFSET = offset
+        
+        if pa == None:
+            parameters.Parameters()
+            pa.dist.periodic = True
+            pa.dist.bimodal = False
+            pa.dist.noise = True
 
         pa.simu_len = self.SEQ_LEN + self.OFFSET
-        pa.dist.periodic = True
-        pa.dist.bimodal = False
-        pa.dist.noise = True
+
         self.pa = pa
         self.inputs = [generate_sequence_for_rnn(pa)[:,0] for _ in range(self.N_SEQS + 1)]
 
