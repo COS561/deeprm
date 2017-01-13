@@ -82,7 +82,9 @@ def generate_sequence_work(pa, seed=42):
 
         for i in range(simu_len):
 
-            nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
+            if np.random.rand() < pa.new_job_rate:
+
+                nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
 
     else:
 
@@ -100,41 +102,20 @@ def generate_sequence_work(pa, seed=42):
             for j in range(pa.num_ex):
                 #generate length, size attributes of sequence j in cycle i:
 
-                if pa.dist.bimodal:
+                if np.random.rand() < pa.new_job_rate:
 
-                    nw_len_seq[i, j], nw_size_seq[i, j, :] = pa.dist.bi_model_dist()
-    
-                elif pa.dist.periodic:
+                    if pa.dist.bimodal:
 
-                    #nw_len_seq[i,j] = round(4*(math.sin(0.5*j) + math.cos(0.25*j))+8)
-                    offset = np.random.randint(-2, 2)
+                        nw_len_seq[i, j], nw_size_seq[i, j, :] = pa.dist.bi_model_dist()
+        
+                    elif pa.dist.periodic:
 
-                    nw_len_seq[i,j] = round(7*(math.sin((j+offset)/pa.dist.job_period))+8)
+                        #nw_len_seq[i,j] = round(4*(math.sin(0.5*j) + math.cos(0.25*j))+8)
+                        offset = np.random.randint(-2, 2)
+                        nw_len_seq[i,j] = round(7*(math.sin((j+offset)/pa.dist.job_period))+8)
 
-                    for k in range(pa.num_res):
-                        nw_size_seq[i,j,k] = np.random.randint(1, pa.dist.max_nw_size + 1)
-
-    # for i in range(simu_len):
-
-    #     if np.random.rand() < pa.new_job_rate:  # a new job comes
-
-    #         periodic_dist = 0;
-
-    #         if periodic_dist:
-
-    #             nw_len_seq[i] = round(4*(math.sin(0.5*i) + math.cos(0.25*i))+8)
-
-    #             for j in range(pa.num_res):
-    #                 nw_size_seq[i,j] = np.random.randint(1, pa.dist.max_nw_size + 1)
-
-    #         else:
-
-    #             nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
-
-    # nw_len_seq = np.reshape(nw_len_seq,
-    #                         [pa.num_ex, pa.simu_len])
-    # nw_size_seq = np.reshape(nw_size_seq,
-    #                          [pa.num_ex, pa.simu_len, pa.num_res])
+                        for k in range(pa.num_res):
+                            nw_size_seq[i,j,k] = np.random.randint(1, pa.dist.max_nw_size + 1)
 
     return nw_len_seq, nw_size_seq
 
