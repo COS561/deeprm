@@ -10,7 +10,7 @@ import sys
 from job_distribution import *
 import parameters
 
-INPUT_DIM = 3
+INPUT_DIM = 1
 CELL_DIM = 16
 N_SEQS = 100000
 N_PRINT = 100
@@ -21,14 +21,22 @@ LEARNING_RATE = 0.01
 
 pa = parameters.Parameters()
 pa.simu_len = SEQ_LEN + 1
-inputs = [generate_sequence_for_rnn(pa) for _ in range(N_SEQS + 1)]
+pa.dist.periodic = True
+pa.dist.bimodal = False
+pa.dist.noise = True
+inputs = [generate_sequence_for_rnn(pa)[:,0] for _ in range(N_SEQS + 1)]
 
 print('Build model...')
 
-data_sequence = [tf.placeholder(tf.float32, shape=[BATCH_SIZE, INPUT_DIM])
+# print(inputs)
+
+data_sequence = [tf.placeholder(tf.float32, shape=[BATCH_SIZE])
                  for _ in range(SEQ_LEN + 1)]
-x_seq = data_sequence[:-1]
-y_seq = data_sequence[1:]
+
+expanded_data_sequence = [tf.expand_dims(d, dim=1) for d in data_sequence]
+
+x_seq = expanded_data_sequence[:-1]
+y_seq = expanded_data_sequence[1:]
 
 lstm = tf.nn.rnn_cell.LSTMCell(CELL_DIM, state_is_tuple=False)
 # Initial state of the LSTM memory.
@@ -57,11 +65,15 @@ with tf.variable_scope("state_saving_lstm") as scope:
     opt = tf.train.RMSPropOptimizer(tf.train.exponential_decay(LEARNING_RATE, global_step, 1000, 0.95, staircase=True))
     train_step = opt.minimize(loss, global_step=global_step)
 
-    state = lstm.zero_state(BATCH_SIZE, tf.float32)
-    output, state = lstm(x_seq[0], state)
-    pred = tf.matmul(output, pred_w) + pred_b
+    state = lstm.zero_state(1, tf.float32)
+    for i in range(int(np.floor(SEQ_LEN/2.0))):
+        x_init = tf.expand_dims(x_seq[i][0, :], dim=0)
+        output, state = lstm(x_init, state)
+        pred = tf.matmul(output, pred_w) + pred_b
+
     generated_seq = [pred]
-    for _ in range(SEQ_LEN - 1):
+
+    for _ in range(int(np.ceil(SEQ_LEN/2.0))):
         output, state = lstm(pred, state)
         pred = tf.matmul(output, pred_w) + pred_b
         generated_seq.append(pred)
@@ -81,15 +93,16 @@ for iteration in range(NUM_TRAIN_STEP):
     print('Iteration', iteration)
     #print(inputs)
     seqs = [inputs[random.randint(0, N_SEQS - 1)] for _ in range(BATCH_SIZE)]
-    #print(seqs)
+    # print(seqs)
     data = [np.asarray([seqs[i][j] for i in range(BATCH_SIZE)]) for j in range(SEQ_LEN + 1)]
     print('----- training:')
-    #print(data)
+    # print(data)
     #print(data_sequence)
     _, l, generated = sess.run([train_step, loss, generated_seq], feed_dict=dict(zip(data_sequence, data)))
-    print(l)
     print("Error: " + str(l))
-
-    print('----- generating:')
-    print([p for p in generated[:][0][:]])
-    print(sess.run(pred_b))
+    if iteration % 500 == 0:
+        print('----- ground truth:')
+        print([d[:][0] for d in data[int(np.floor(SEQ_LEN/2)):]])
+        print('----- generating:')
+        print([g[0][0] for g in generated])
+    #print(sess.run(pred_b))
