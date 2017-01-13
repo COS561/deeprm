@@ -75,8 +75,8 @@ def generate_sequence_work(pa, seed=42):
 
     nw_dist = pa.dist.bi_model_dist
 
-    nw_len_seq = np.zeros((pa.num_ex, pa.simu_len), dtype=int)
-    nw_size_seq = np.zeros((pa.num_ex, pa.simu_len, pa.num_res), dtype=int)
+    nw_len_seq = np.zeros((pa.simu_len, pa.num_ex), dtype=int)
+    nw_size_seq = np.zeros((pa.simu_len, pa.num_ex, pa.num_res), dtype=int)
 
     if pa.dist.normal:
 
@@ -84,12 +84,9 @@ def generate_sequence_work(pa, seed=42):
 
             nw_len_seq[i], nw_size_seq[i, :] = nw_dist()
 
-        nw_len_seq = np.reshape(nw_len_seq,[pa.num_ex, pa.simu_len])
-        nw_size_seq = np.reshape(nw_size_seq,[pa.num_ex, pa.simu_len, pa.num_res])
-
     else:
 
-        for i in range(pa.num_ex):
+        for i in range(pa.simu_len):
             #set parameters of length dist for cycle i:
 
             if pa.dist.bimodal:
@@ -100,7 +97,7 @@ def generate_sequence_work(pa, seed=42):
             elif pa.dist.periodic:
                     pa.dist.job_period = np.random.randint(2, 10)
 
-            for j in range(pa.simu_len):
+            for j in range(pa.num_ex):
                 #generate length, size attributes of sequence j in cycle i:
 
                 if pa.dist.bimodal:
@@ -139,7 +136,6 @@ def generate_sequence_work(pa, seed=42):
     # nw_size_seq = np.reshape(nw_size_seq,
     #                          [pa.num_ex, pa.simu_len, pa.num_res])
 
-    print nw_len_seq
     return nw_len_seq, nw_size_seq
 
 def generate_sequence_for_rnn(pa, seed=42):
