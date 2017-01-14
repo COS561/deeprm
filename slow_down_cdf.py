@@ -122,10 +122,10 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
                 if th == 0:
                     actions.append(a)
 
-                if !pa.rnn:
+                if not pa.rnn:
                     ob, rew, done, info = env.step(a, repeat=True)
                 else:
-                    ob, rew, done, info = env.forecast(a, repeat=True)
+                    ob, rew, done, info = env.forecast_step(a, repeat=True)
 
 
                 if done: break
@@ -136,7 +136,10 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
 
         a_best = actions[np.argmax(sum_rews)]
         env = copy.deepcopy(ori_env)
-        ob, rew, done, info = env.step(a_best, repeat=True)
+        ob, rew, done, info, new_job_list = env.step(a_best, repeat=True, return_raw_jobs=True)
+
+        for new_job in new_job_list:
+            env.rnn.update_history(new_job)
 
         rews.append(rew)
 

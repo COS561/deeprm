@@ -18,7 +18,9 @@ class Env:
         self.end = end  # termination type, 'no_new_job' or 'all_done'
 
         # rnn stuff
-        self.rnn = dist_rnn(pa)
+        if self.pa.rnn:
+            self.rnn = tf_dist_rnn_object.dist_rnn(pa)
+            self.rnn.train()
 
         self.nw_dist = pa.dist.bi_model_dist
 
@@ -30,19 +32,15 @@ class Env:
         else:
             np.random.seed(seed)
 
-        if nw_len_seqs is None or nw_size_seqs is None:
-            # generate new work
+        if self.pa.rnn:
             ori_simu_len = pa.simu_len
             pa.simu_len = pa.simu_len + self.rnn.SEQ_LEN
+
+
+        if nw_len_seqs is None or nw_size_seqs is None:
+            # generate new work
             self.nw_len_seqs, self.nw_size_seqs = \
                 pa.dist.generate_sequence_work(pa, np.random.seed)
-            pa.simu_len = ori_simu_len
-
-            self.history = [self.nw_len_seqs[:, :self.rnn.SEQ_LEN],
-                     self.nw_size_seqs[:, :self.rnn.SEQ_LEN, 0], self.nw_size_seqs[:, :self.rnn.SEQ_LEN, 1]]
-
-            self.nw_len_seqs = self.nw_len_seqs[:, self.rnn.SEQ_LEN:]
-            self.nw_size_seqs = self.nw_size_seqs[:, self.rnn.SEQ_LEN:, :]
 
             self.workload = np.zeros(pa.num_res)
             for i in xrange(pa.num_res):
@@ -59,6 +57,15 @@ class Env:
             self.nw_len_seqs = nw_len_seqs
             self.nw_size_seqs = nw_size_seqs
 
+        if self.pa.rnn:
+            self.len_seeds_for_rnn = self.nw_len_seqs[:, :self.rnn.SEQ_LEN]
+            self.res_seeds_for_rnn = self.nw_len_seqs[:, :self.rnn.SEQ_LEN, :]
+
+            self.nw_len_seqs = self.nw_len_seqs[:, self.rnn.SEQ_LEN:]
+            self.nw_size_seqs = self.nw_size_seqs[:, self.rnn.SEQ_LEN:, :]
+
+            pa.simu_len = ori_simu_len
+
         self.seq_no = 0  # which example sequence
         self.seq_idx = 0  # index in that sequence
 
@@ -68,6 +75,10 @@ class Env:
         self.job_backlog = JobBacklog(pa)
         self.job_record = JobRecord()
         self.extra_info = ExtraInfo(pa)
+
+        if self.pa.rnn:
+            self.seed_rnn()
+
 
     def generate_sequence_work(self, simu_len):
 
@@ -85,6 +96,13 @@ class Env:
     def get_new_job_from_seq(self, seq_no, seq_idx):
         new_job = Job(res_vec=self.nw_size_seqs[seq_no, seq_idx, :],
                       job_len=self.nw_len_seqs[seq_no, seq_idx],
+                      job_id=len(self.job_record.record),
+                      enter_time=self.curr_time)
+        return new_job
+
+    def get_new_job_from_forecast(self, seq_idx):
+        new_job = Job(res_vec=self.rnn.forecast_nw_size_seqs[seq_idx, :],
+                      job_len=self.rnn.forecast_nw_len_seqs[seq_idx],
                       job_id=len(self.job_record.record),
                       enter_time=self.curr_time)
         return new_job
@@ -239,7 +257,7 @@ class Env:
 
         return reward
 
-    def step(self, a, repeat=False):
+    def step(self, a, repeat=False, return_raw_jobs=False):
 
         status = None
 
@@ -257,6 +275,8 @@ class Env:
                 status = 'MoveOn'
             else:
                 status = 'Allocate'
+
+        new_job_list = []
 
         if status == 'MoveOn':
             self.curr_time += 1
@@ -289,6 +309,7 @@ class Env:
                         for i in xrange(self.pa.num_nw):
                             if self.job_slot.slot[i] is None:  # put in new visible job slots
                                 self.job_slot.slot[i] = new_job
+                                new_job_list.append(new_job)
                                 self.job_record.record[new_job.id] = new_job
                                 to_backlog = False
                                 break
@@ -313,6 +334,7 @@ class Env:
             # dequeue backlog
             if self.job_backlog.curr_size > 0:
                 self.job_slot.slot[a] = self.job_backlog.backlog[0]  # if backlog empty, it will be 0
+                new_job_list.append(self.job_backlog.backlog[0])
                 self.job_backlog.backlog[: -1] = self.job_backlog.backlog[1:]
                 self.job_backlog.backlog[-1] = None
                 self.job_backlog.curr_size -= 1
@@ -332,10 +354,14 @@ class Env:
         if self.render:
             self.plot_state()
 
-        return ob, reward, done, info
+        if return_raw_jobs:
+            return ob, reward, done, info, new_job_list
+
+        else:
+            return ob, reward, done, info
 
 
-    def forecast(self, a, repeat=False):
+    def forecast_step(self, a, repeat=False):
 
         status = None
 
@@ -377,7 +403,7 @@ class Env:
             if not done:
 
                 if self.seq_idx < self.pa.simu_len:  # otherwise, end of new job sequence, i.e. no new jobs
-                    new_job = self.get_new_job_from_seq(self.seq_no, self.seq_idx)
+                    new_job = self.get_new_job_from_forecast(self.seq_idx)
 
                     if new_job.len > 0:  # a new job comes
 
@@ -441,6 +467,13 @@ class Env:
         self.job_backlog = JobBacklog(self.pa)
         self.job_record = JobRecord()
         self.extra_info = ExtraInfo(self.pa)
+
+        if self.pa.rnn:
+            self.seed_rnn()
+
+
+    def seed_rnn(self):
+        self.rnn.set_history(self.nw_len_seqs[self.seq_no, :], self.nw_size_seqs[self.seq_no, :, :])
 
 
 class Job:

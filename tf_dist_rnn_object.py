@@ -40,7 +40,6 @@ class dist_rnn(object):
         self.trained = False
         self.training = False
 
-
         if pa is None:
             pa = parameters.Parameters()
             pa.dist.periodic = periodic
@@ -66,6 +65,51 @@ class dist_rnn(object):
         size2_seq = size_seq[:,:,1]
         pa.num_ex = tmp_num_ex
         return len_seq, size1_seq, size2_seq
+
+    def set_history(self, len_seq, size_seq):
+        size1_seq = size_seq[:, 0]
+        size2_seq = size_seq[:, 1]
+        self.len_history = len_seq
+        self.s1_history = size1_seq
+        self.s2_history = size2_seq
+
+    def update_history(self, new_len, new_size):
+        self.len_history[:-1] = self.len_history[1:]
+        self.len_history[-1] = new_len
+        new_size1s = new_size[0]
+        new_size2s = new_size[1]
+        self.s1_history[:-1] = self.s1_history[1:]
+        self.s1_history[-1] = new_size1s
+        self.s2_history[:-1] = self.s2_history[1:]
+        self.s2_history[-1] = new_size2s
+
+    def update_history(self, new_job):
+        new_len = new_job.len
+        new_size = new_job.res_vec
+        self.len_history[:-1] = self.len_history[1:]
+        self.len_history[-1] = new_len
+        new_size1s = new_size[0]
+        new_size2s = new_size[1]
+        self.s1_history[:-1] = self.s1_history[1:]
+        self.s1_history[-1] = new_size1s
+        self.s2_history[:-1] = self.s2_history[1:]
+        self.s2_history[-1] = new_size2s
+
+    def forecast_from_history(self):
+        forecast = self.sample_forecast_with_starter_seq(
+            self.len_history.to_list, self.s1_history.to_list, self.s2_history.to_list)
+        lens = [s[0] for s in forecast]
+        sizes = [s[1:] for s in forecast]
+        self.forecast_nw_len_seqs = np.asarray(lens)
+        self.forecast_nw_size_seqs = np.asarray(sizes)
+
+        return self.forecast_nw_len_seqs, self.forecast_nw_size_seqs
+
+
+    def hallucination_step(self, ):
+        self.update_history()
+
+        return self.forecast_from_history()
 
 
     def build_graph(self):
