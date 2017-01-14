@@ -32,7 +32,7 @@ class dist_rnn(object):
         self.N_PRINT = 100
         self.BATCH_SIZE = 32
         self.SEQ_LEN = seq_len
-        self.NUM_TRAIN_STEP = 100000
+        self.NUM_TRAIN_STEP = 2000
         self.LEARNING_RATE = 0.01
         self.OFFSET = offset
         self.FORECAST_LEN = forecast
