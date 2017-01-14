@@ -24,9 +24,9 @@ class Dist:
         self.other_res_upper = max_nw_size / 5
 
         self.normal = 0
-        self.bimodal = 1
-        self.periodic = 0
-        self.noise = True
+        self.bimodal = 0
+        self.periodic = 1
+        self.noise = False
 
         # self.switch_chance = 0.8
 

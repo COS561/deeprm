@@ -122,7 +122,11 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
                 if th == 0:
                     actions.append(a)
 
-                ob, rew, done, info = env.step(a, repeat=True)
+                if !pa.rnn:
+                    ob, rew, done, info = env.step(a, repeat=True)
+                else:
+                    ob, rew, done, info = env.forecast(a, repeat=True)
+
 
                 if done: break
 
