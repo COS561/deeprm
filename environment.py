@@ -10,7 +10,7 @@ import job_distribution
 
 class Env:
     def __init__(self, pa, nw_len_seqs=None, nw_size_seqs=None,
-                 seed=42, render=False, repre='image', end='no_new_job'):
+                 seed=None, render=False, repre='image', end='no_new_job'):
 
         self.pa = pa
         self.render = render
@@ -21,6 +21,8 @@ class Env:
         if self.pa.rnn:
             self.rnn = tf_dist_rnn_object.dist_rnn(pa)
             self.rnn.train()
+        else:
+            self.rnn = None
 
         self.nw_dist = pa.dist.bi_model_dist
 
@@ -28,7 +30,7 @@ class Env:
 
         # set up random seed
         if self.pa.unseen:
-            np.random.seed(314159)
+            np.random.seed(None)
         else:
             np.random.seed(seed)
 
@@ -40,26 +42,32 @@ class Env:
         if nw_len_seqs is None or nw_size_seqs is None:
             # generate new work
             self.nw_len_seqs, self.nw_size_seqs = \
-                pa.dist.generate_sequence_work(pa, np.random.seed)
+                job_distribution.generate_sequence_work(pa, seed=None)
+
 
             self.workload = np.zeros(pa.num_res)
             for i in xrange(pa.num_res):
                 self.workload[i] = \
-                    np.sum(self.nw_size_seqs[:, i] * self.nw_len_seqs) / \
+                    np.sum(np.reshape(self.nw_size_seqs[:, :, i], self.pa.simu_len * self.pa.num_ex) *
+                           np.reshape(self.nw_len_seqs[:, :], self.pa.simu_len * self.pa.num_ex)) / \
                     float(pa.res_slot) / \
                     float(len(self.nw_len_seqs))
                 print("Load on # " + str(i) + " resource dimension is " + str(self.workload[i]))
+
             self.nw_len_seqs = np.reshape(self.nw_len_seqs,
                                            [self.pa.num_ex, self.pa.simu_len])
             self.nw_size_seqs = np.reshape(self.nw_size_seqs,
                                            [self.pa.num_ex, self.pa.simu_len, self.pa.num_res])
+
         else:
             self.nw_len_seqs = nw_len_seqs
             self.nw_size_seqs = nw_size_seqs
 
         if self.pa.rnn:
+            print(self.nw_size_seqs.shape)
+            print(self.nw_len_seqs)
             self.len_seeds_for_rnn = self.nw_len_seqs[:, :self.rnn.SEQ_LEN]
-            self.res_seeds_for_rnn = self.nw_len_seqs[:, :self.rnn.SEQ_LEN, :]
+            self.res_seeds_for_rnn = self.nw_size_seqs[:, :self.rnn.SEQ_LEN, :]
 
             self.nw_len_seqs = self.nw_len_seqs[:, self.rnn.SEQ_LEN:]
             self.nw_size_seqs = self.nw_size_seqs[:, self.rnn.SEQ_LEN:, :]

@@ -22,7 +22,7 @@ USAGE:
 
 class dist_rnn(object):
 
-    def __init__(self, forecast=50, seq_len=50, pa=None, offset=1, noise=False, bimodal=False, periodic=True):
+    def __init__(self, pa=None, forecast_len=50, seq_len=50, offset=1, noise=False, bimodal=False, periodic=True):
 
         #self.INPUT_DIM = 1
         self.INPUT_DIM = 1
@@ -32,10 +32,11 @@ class dist_rnn(object):
         self.N_PRINT = 100
         self.BATCH_SIZE = 32
         self.SEQ_LEN = seq_len
-        self.NUM_TRAIN_STEP = 2000
+        self.NUM_TRAIN_STEP = 2
         self.LEARNING_RATE = 0.01
         self.OFFSET = offset
-        self.FORECAST_LEN = forecast
+        #self.FORECAST_LEN = forecast_len
+        self.FORECAST_LEN = 50
 
         self.trained = False
         self.training = False
@@ -46,9 +47,9 @@ class dist_rnn(object):
             pa.dist.bimodal = bimodal
             pa.dist.noise = noise
 
-        print pa.max_job_len
-        print pa.max_job_size
-        print pa.dist.max_nw_size
+        # print pa.max_job_len
+        # print pa.max_job_size
+        # print pa.dist.max_nw_size
 
         pa.simu_len = self.SEQ_LEN + self.OFFSET
 
@@ -97,13 +98,13 @@ class dist_rnn(object):
 
     def forecast_from_history(self):
         forecast = self.sample_forecast_with_starter_seq(
-            self.len_history.to_list, self.s1_history.to_list, self.s2_history.to_list)
+            self.len_history.tolist(), self.s1_history.tolist(), self.s2_history.tolist())
         lens = [s[0] for s in forecast]
         sizes = [s[1:] for s in forecast]
         self.forecast_nw_len_seqs = np.asarray(lens)
         self.forecast_nw_size_seqs = np.asarray(sizes)
 
-        return self.forecast_nw_len_seqs, self.forecast_nw_size_seqs
+        # return self.forecast_nw_len_seqs, self.forecast_nw_size_seqs
 
 
     def hallucination_step(self, ):
@@ -300,7 +301,9 @@ class dist_rnn(object):
 
             generated_forecast_seq = [[len_pred, s1_pred, s2_pred]]
 
-            for _ in range(self.FORECAST_LEN):
+            print self.FORECAST_LEN
+
+            for forecast_iter in range(self.FORECAST_LEN):
                 len_x = tf.expand_dims(tf.nn.embedding_lookup(self.len_embeddings, len_pred), 0)
                 s1_x = tf.expand_dims(tf.nn.embedding_lookup(self.s1_embeddings, s1_pred), 0)
                 s2_x = tf.expand_dims(tf.nn.embedding_lookup(self.s2_embeddings, s2_pred), 0)

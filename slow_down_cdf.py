@@ -95,15 +95,23 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
     env.reset()
     rews = []
 
+    rnn_tmp = env.rnn
+
     for te in xrange(episode_max_length):
+
+        env.rnn = None
         ori_env = copy.deepcopy(env)
         actions = []
         future = min(episode_max_length - te, pa.simu_len)
         rews_hals = np.zeros((pa.num_hal, future), dtype=float)
 
+        if pa.rnn:
+            rnn_tmp.forecast_from_history()
+
         for h in range(pa.num_hal):
-            env = copy.deepcopy(ori_env)
-            ob = env.observe()
+            new_env = copy.deepcopy(ori_env)
+            new_env.rnn = rnn_tmp
+            ob = new_env.observe()
 
             for th in range(future):
 
@@ -111,21 +119,21 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
                     a = pg_learner.choose_action(ob)
 
                 elif test_type == 'Tetris':
-                    a = other_agents.get_packer_action(env.machine, env.job_slot)
+                    a = other_agents.get_packer_action(new_env.machine, new_env.job_slot)
 
                 elif test_type == 'SJF':
-                    a = other_agents.get_sjf_action(env.machine, env.job_slot)
+                    a = other_agents.get_sjf_action(new_env.machine, new_env.job_slot)
 
                 elif test_type == 'Random':
-                    a = other_agents.get_random_action(env.job_slot)
+                    a = other_agents.get_random_action(new_env.job_slot)
 
                 if th == 0:
                     actions.append(a)
 
                 if not pa.rnn:
-                    ob, rew, done, info = env.step(a, repeat=True)
+                    ob, rew, done, info = new_env.step(a, repeat=True)
                 else:
-                    ob, rew, done, info = env.forecast_step(a, repeat=True)
+                    ob, rew, done, info = new_env.forecast_step(a, repeat=True)
 
 
                 if done: break
@@ -135,18 +143,25 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
         sum_rews = rews_hals.sum(axis=1, dtype=float)
 
         a_best = actions[np.argmax(sum_rews)]
-        env = copy.deepcopy(ori_env)
-        ob, rew, done, info, new_job_list = env.step(a_best, repeat=True, return_raw_jobs=True)
+        working_env = copy.deepcopy(ori_env)
+        working_env.rnn = rnn_tmp
 
-        for new_job in new_job_list:
-            env.rnn.update_history(new_job)
+        if pa.rnn:
+            ob, rew, done, info, new_job_list = working_env.step(a_best, repeat=True, return_raw_jobs=True)
+
+            for new_job in new_job_list:
+                working_env.rnn.update_history(new_job)
+
+        else:
+            ob, rew, done, info = working_env.step(a_best, repeat=True)
 
         rews.append(rew)
 
         if done: break
-        if render: env.render()
+        if render: working_env.render()
         # env.render()
 
+    env.rnn = rnn_tmp
     return np.array(rews), info
 
 
