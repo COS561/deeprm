@@ -40,6 +40,8 @@ class Parameters:
 
         self.num_hal = 50             # number of hallucinated trajectories
 
+        self.rnn = True
+
         # distribution for new job arrival
         self.dist = job_distribution.Dist(self.num_res, self.max_job_size, self.max_job_len)
 
