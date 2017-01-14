@@ -126,7 +126,7 @@ class dist_rnn(object):
 
         self.embedded_len_sequence = [tf.nn.embedding_lookup(self.len_embeddings, d) for d in scaled_len]
 
-        print(self.embedded_len_sequence)
+        # print(self.embedded_len_sequence)
 
         self.s1_sequence = [tf.placeholder(tf.int32, shape=[self.BATCH_SIZE])
                          for _ in range(self.SEQ_LEN + self.OFFSET)]
@@ -137,7 +137,7 @@ class dist_rnn(object):
 
         self.embedded_s1_sequence = [tf.nn.embedding_lookup(self.s1_embeddings, d) for d in scaled_s1]
 
-        print(self.embedded_s1_sequence)
+        # print(self.embedded_s1_sequence)
 
         self.s2_sequence = [tf.placeholder(tf.int32, shape=[self.BATCH_SIZE])
                          for _ in range(self.SEQ_LEN + self.OFFSET)]
@@ -148,7 +148,7 @@ class dist_rnn(object):
 
         self.embedded_s2_sequence = [tf.nn.embedding_lookup(self.s2_embeddings, d) for d in scaled_s2]
 
-        print(self.embedded_s2_sequence)
+        # print(self.embedded_s2_sequence)
 
         # expanded_data_sequence = [tf.expand_dims(d, dim=1) for d in self.data_sequence]
 
