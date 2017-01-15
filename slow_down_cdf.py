@@ -8,6 +8,7 @@ import pg_network
 import other_agents
 
 import copy
+import math
 
 def discount(x, gamma):
     """
@@ -95,14 +96,25 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
     env.reset()
     rews = []
 
+    rnn_tmp = env.rnn 
+
     for te in xrange(episode_max_length):
+        env.rnn = None
         ori_env = copy.deepcopy(env)
         actions = []
         future = min(episode_max_length - te, pa.simu_len)
         rews_hals = np.zeros((pa.num_hal, future), dtype=float)
 
+        if pa.rnn:
+            rnn_tmp.forecast_from_history()
+
         for h in range(pa.num_hal):
             env = copy.deepcopy(ori_env)
+            env.rnn = rnn_tmp
+
+            if pa.rnn:
+                env.replace_backlog_from_rnn()
+
             ob = env.observe()
 
             for th in range(future):
@@ -122,7 +134,7 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
                 if th == 0:
                     actions.append(a)
 
-                ob, rew, done, info = env.step(a, repeat=True)
+                ob, rew, done, info = env.step(a, repeat=True, forecasting=(pa.rnn==True))
 
                 if done: break
 
@@ -130,9 +142,33 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
         
         sum_rews = rews_hals.sum(axis=1, dtype=float)
 
-        a_best = actions[np.argmax(sum_rews)]
+        sum_actions = np.zeros(pa.num_nw+1, dtype=float)
+        actions_count = np.zeros(pa.num_nw+1, dtype=float)
+        for i in range(pa.num_hal):
+            sum_actions[actions[i]] += sum_rews[i]
+            actions_count[actions[i]] += 1
+
+        mean_actions = sum_actions / actions_count 
+
+        a_best = 0
+        rew_best = 1
+        for i in range(len(mean_actions)):
+            if (mean_actions[i] > rew_best or rew_best == 1) and not math.isnan(mean_actions[i]):
+                rew_best = mean_actions[i]
+                a_best = i
+
+        #a_best = np.argmax(mean_actions)
         env = copy.deepcopy(ori_env)
-        ob, rew, done, info = env.step(a_best, repeat=True)
+        env.rnn = rnn_tmp
+
+        if pa.rnn:
+            ob, rew, done, info, new_job_list = env.step(a_best, repeat=True, return_raw_jobs=True)
+
+            for new_job in new_job_list:
+                env.rnn.update_history(new_job)
+
+        else:
+            ob, rew, done, info = env.step(a_best, repeat=True)
 
         rews.append(rew)
 
@@ -140,7 +176,9 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
         if render: env.render()
         # env.render()
 
-    return np.array(rews), info
+        env.rnn = rnn_tmp
+
+    return np.array(rews), info, env
 
 
 def launch(pa, pg_resume=None, render=False, plot=False, repre='image', end='no_new_job'):
@@ -187,7 +225,7 @@ def launch(pa, pg_resume=None, render=False, plot=False, repre='image', end='no_
 
             print " "
             print "Hallucinated version"
-            rews, info = get_traj_halluc(test_type, pa, env, pa.episode_max_length, pg_resume)
+            rews, info, env = get_traj_halluc(test_type, pa, env, pa.episode_max_length, pg_resume)
 
             print "---------- " + test_type + " -----------"
 

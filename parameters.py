@@ -38,7 +38,9 @@ class Parameters:
 
         self.nonStationary = False      # if true, job duration distribution changes over time
 
-        self.num_hal = 50             # number of hallucinated trajectories
+        self.num_hal = 2             # number of hallucinated trajectories
+
+        self.rnn = True
 
         # distribution for new job arrival
         self.dist = job_distribution.Dist(self.num_res, self.max_job_size, self.max_job_len)
