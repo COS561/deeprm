@@ -111,6 +111,10 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
         for h in range(pa.num_hal):
             new_env = copy.deepcopy(ori_env)
             new_env.rnn = rnn_tmp
+
+            if pa.rnn:
+                new_env.replace_backlog_from_rnn()
+
             ob = new_env.observe()
 
             for th in range(future):
@@ -130,10 +134,7 @@ def get_traj_halluc(test_type, pa, env, episode_max_length, pg_resume=None, rend
                 if th == 0:
                     actions.append(a)
 
-                if not pa.rnn:
-                    ob, rew, done, info = new_env.step(a, repeat=True)
-                else:
-                    ob, rew, done, info = new_env.forecast_step(a, repeat=True)
+                ob, rew, done, info = new_env.step(a, repeat=True, forecasting=(pa.rnn==True))
 
 
                 if done: break

@@ -36,7 +36,7 @@ class dist_rnn(object):
         self.LEARNING_RATE = 0.01
         self.OFFSET = offset
         #self.FORECAST_LEN = forecast_len
-        self.FORECAST_LEN = 50
+        self.FORECAST_LEN = 100
 
         self.trained = False
         self.training = False
