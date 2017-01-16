@@ -26,9 +26,9 @@ class Dist:
         self.normal = 0
         self.bimodal = 0
         self.periodic = 1
-        self.noise = True
+        self.noise = False
 
-        # self.switch_chance = 0.8
+        self.switch_chance = 0.5
 
     def normal_dist(self):
 
@@ -94,11 +94,12 @@ def generate_sequence_work(pa, seed=42):
 
             if pa.dist.bimodal:
 
-                if np.random.rand() < 0.5:
+                if np.random.rand() < pa.switch_chance:
                     pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
 
             elif pa.dist.periodic:
                 pa.dist.job_period = np.random.randint(3, 12)
+                pa.dist.job_amplitude = np.random.randint(4, 14)
                 pa.dist.job_phase = np.random.randint(0, 12)
                 pa.dist.size_periods = [pa.dist.job_period + np.random.randint(-2, 2) for _ in range(pa.num_res)]
                 pa.dist.size_phases = [np.random.randint(3, 12) for _ in range(pa.num_res)]
@@ -119,15 +120,8 @@ def generate_sequence_work(pa, seed=42):
                             offset = np.random.randint(-2, 2)
                         else:
                             offset = 0
-                        nw_len_seq[i, j] = round(7 * (math.sin((j + offset + pa.dist.job_phase) / float(pa.dist.job_period)))) + 8
-
-                        #if nw_len_seq[i, j] < 1:
-                        # print(nw_len_seq[i, j])
-                        #    print(j)
-                        #    print(offset)
-                        #    print(pa.dist.job_phase)
-                        #    print(pa.dist.job_period)
-
+                        nw_len_seq[i, j] = round(0.5 * pa.dist.job_amplitude * (math.sin((j + offset + pa.dist.job_phase) / 
+                            float(pa.dist.job_period)))) + (0.5 * pa.dist.job_amplitude) + 1
 
                         for k in range(pa.num_res):
                             if pa.dist.noise:
@@ -138,10 +132,9 @@ def generate_sequence_work(pa, seed=42):
                                 (pa.dist.max_nw_size / 2.0) + (pa.dist.max_nw_size / 2.0) *
                                 (math.sin((j + offset + pa.dist.size_phases[k]) / pa.dist.size_periods[k])))) + 1
 
-        # if not(np.all(nw_len_seq >= 1)):
-        #     print(nw_len_seq[np.where(nw_len_seq < 1)])
-        # assert(np.all(nw_size_seq >= 1))
-
+        if not(np.all(nw_len_seq >= 1)):
+            print(nw_len_seq[np.where(nw_len_seq < 1)])
+        assert(np.all(nw_size_seq >= 1))
 
     # print nw_len_seq
     return nw_len_seq, nw_size_seq
