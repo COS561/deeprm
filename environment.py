@@ -21,7 +21,7 @@ class Env:
         # rnn stuff
         if self.pa.rnn:
             self.rnn = tf_dist_rnn_object.dist_rnn(pa)
-            self.rnn.train()
+            self.rnn.restore()
         else:
             self.rnn = None
 
