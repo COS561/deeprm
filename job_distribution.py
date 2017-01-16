@@ -28,7 +28,7 @@ class Dist:
         self.periodic = 1
         self.noise = False
 
-        # self.switch_chance = 0.8
+        self.switch_chance = 0.5
 
     def normal_dist(self):
 
@@ -94,7 +94,7 @@ def generate_sequence_work(pa, seed=42):
 
             if pa.dist.bimodal:
 
-                if np.random.rand() < 0.5:
+                if np.random.rand() < pa.switch_chance:
                     pa.dist.job_small_chance = 1 - pa.dist.job_small_chance
 
             elif pa.dist.periodic:
@@ -120,15 +120,8 @@ def generate_sequence_work(pa, seed=42):
                             offset = np.random.randint(-2, 2)
                         else:
                             offset = 0
-                        nw_len_seq[i, j] = round(0.5 * pa.dist.job_amplitude * (math.sin((j + offset + pa.dist.job_phase) / float(pa.dist.job_period)))) + (0.5 * pa.dist.job_amplitude) + 1
-
-                        #if nw_len_seq[i, j] < 1:
-                        # print(nw_len_seq[i, j])
-                        #    print(j)
-                        #    print(offset)
-                        #    print(pa.dist.job_phase)
-                        #    print(pa.dist.job_period)
-
+                        nw_len_seq[i, j] = round(0.5 * pa.dist.job_amplitude * (math.sin((j + offset + pa.dist.job_phase) / 
+                            float(pa.dist.job_period)))) + (0.5 * pa.dist.job_amplitude) + 1
 
                         for k in range(pa.num_res):
                             if pa.dist.noise:
@@ -142,7 +135,6 @@ def generate_sequence_work(pa, seed=42):
         if not(np.all(nw_len_seq >= 1)):
             print(nw_len_seq[np.where(nw_len_seq < 1)])
         assert(np.all(nw_size_seq >= 1))
-
 
     # print nw_len_seq
     return nw_len_seq, nw_size_seq
