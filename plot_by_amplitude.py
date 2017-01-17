@@ -42,7 +42,13 @@ print(amps)
 
 plt.figure()
 plt.plot(amps, ratios, linewidth=2)
-plt.show()
+plt.xlabel("Amplitude of periodic signal", fontsize=20)
+plt.ylabel("SFP slowdown / vanilla RL slowdown", fontsize=15)
+if rnn:
+    plt.savefig("rnn_halluc_to_regular_slowdown_ratio" + '.pdf')
+else:
+    plt.savefig("groundtruth_halluc_to_regular_slowdown_ratio" + '.pdf')
+
 
 
 '''

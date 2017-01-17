@@ -99,7 +99,10 @@ def generate_sequence_work(pa, seed=42):
 
             elif pa.dist.periodic:
                 pa.dist.job_period = np.random.randint(3, 12)
-                pa.dist.job_amplitude = np.random.randint(4, 14)
+                if pa.amplitude:
+                    pa.dist.job_amplitude = pa.amplitude
+                else:
+                    pa.dist.job_amplitude = np.random.randint(4, 14)
                 pa.dist.job_phase = np.random.randint(0, 12)
                 pa.dist.size_periods = [pa.dist.job_period + np.random.randint(-2, 2) for _ in range(pa.num_res)]
                 pa.dist.size_phases = [np.random.randint(3, 12) for _ in range(pa.num_res)]

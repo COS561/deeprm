@@ -19,7 +19,7 @@ class Parameters:
         self.episode_max_length = 200  # enforcing an artificial terminal
 
         self.num_res = 2               # number of resources in the system
-        self.num_nw = 5                # maximum allowed number of work in the queue
+        self.num_nw = 3                # maximum allowed number of work in the queue
 
         self.time_horizon = 20         # number of time steps in the graph
         self.max_job_len = 15          # maximum duration of new jobs
@@ -38,9 +38,13 @@ class Parameters:
 
         self.nonStationary = False      # if true, job duration distribution changes over time
 
-        self.num_hal = 2             # number of hallucinated trajectories
+        self.num_hal = 50             # number of hallucinated trajectories
 
         self.rnn = True
+
+        self.experiment_name = None
+
+        self.amplitude = None
 
         # distribution for new job arrival
         self.dist = job_distribution.Dist(self.num_res, self.max_job_size, self.max_job_len)
@@ -91,4 +95,3 @@ class Parameters:
             (self.time_horizon + self.num_nw) + 1  # + 1 for backlog indicator
 
         self.network_output_dim = self.num_nw + 1  # + 1 for void action
-

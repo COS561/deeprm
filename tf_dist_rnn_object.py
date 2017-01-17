@@ -1,9 +1,12 @@
-import numpy
+import matplotlib.pyplot as plt
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas
 import math
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+
+import copy
 
 import random
 import sys
@@ -103,8 +106,8 @@ class dist_rnn(object):
             self.len_history.tolist(), self.s1_history.tolist(), self.s2_history.tolist())
         lens = [s[0] for s in forecast]
         sizes = [s[1:] for s in forecast]
-        self.forecast_nw_len_seqs = np.asarray(lens)
-        self.forecast_nw_size_seqs = np.asarray(sizes)
+        self.forecast_nw_len_seqs = np.asarray(lens) + 1
+        self.forecast_nw_size_seqs = np.asarray(sizes) + 1
 
         # return self.forecast_nw_len_seqs, self.forecast_nw_size_seqs
 
@@ -315,7 +318,9 @@ class dist_rnn(object):
                 s2_pred = tf.multinomial(s2_logits, 1)
                 s2_pred = tf.squeeze(s2_pred)
 
-            generated_forecast_seq = [[len_pred, s1_pred, s2_pred]]
+            generated_forecast_seq = []
+
+            generated_forecast_logit_seq = []
 
             # print self.FORECAST_LEN
 
@@ -332,6 +337,8 @@ class dist_rnn(object):
                 len_logits = tf.matmul(output, len_pred_w) + len_pred_b
                 s1_logits = tf.matmul(output, s1_pred_w) + s1_pred_b
                 s2_logits = tf.matmul(output, s2_pred_w) + s2_pred_b
+                generated_forecast_logit_seq.append([len_logits, s1_logits, s2_logits])
+
                 len_pred = tf.multinomial(len_logits, 1)
                 len_pred = tf.squeeze(len_pred)
                 s1_pred = tf.multinomial(s1_logits, 1)
@@ -341,6 +348,7 @@ class dist_rnn(object):
                 generated_forecast_seq.append([len_pred, s1_pred, s2_pred])
 
             self.forecast = generated_forecast_seq
+            self.forecast_logits = generated_forecast_logit_seq
 
 
         print("Initializing...")
@@ -354,6 +362,7 @@ class dist_rnn(object):
     def restore(self):
         print("Restoring RNN...")
         self.saver.restore(self.sess, self.save_path)
+        self.trained = True
         print("Loaded RNN params successfully.")
 
     def train(self):
@@ -445,7 +454,76 @@ class dist_rnn(object):
             zip(self.single_s2_sequence, [[s] for s in s2_seq])))
         return forecast
 
+    def sample_forecast_logits_with_starter_seq(self, len_seq, s1_seq, s2_seq):
+        if not (self.trained or self.training):
+            raise Exception("RNN has not been trained")
+
+        forecast = self.sess.run(self.forecast_logits, feed_dict=dict(
+            zip(self.single_len_sequence, [[s] for s in len_seq]) +
+            zip(self.single_s1_sequence, [[s] for s in s1_seq]) +
+            zip(self.single_s2_sequence, [[s] for s in s2_seq])))
+        return forecast
+
+
+    def plot_truth(self, len_seq,  s1_seq, s2_seq):
+        len_probs = np.zeros([len(len_seq), self.pa.max_job_len])
+        s1_probs = np.zeros([len(len_seq), self.pa.max_job_size])
+        s2_probs = np.zeros([len(len_seq), self.pa.max_job_size])
+
+        print(len(len_seq))
+        print(len(s1_seq))
+        print(len(s2_seq))
+        for i in range(len(len_seq)):
+            len_probs[i, len_seq[i]-1] = 1
+            s1_probs[i, s1_seq[i]-1] = 1
+            s2_probs[i, s2_seq[i]-1] = 1
+
+        print "len_truth", len_probs
+        plt.figure("len_truth")
+        plt.imshow(np.transpose(len_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+        plt.figure("s1_truth")
+        plt.imshow(np.transpose(s1_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+        plt.figure("s2_truth")
+        plt.imshow(np.transpose(s2_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+
+    def softmax(self, x):
+        return np.exp(x) / np.sum(np.exp(x), axis=0)
+
+    def plot_logits(self, len_logit_seq, s1_logit_seq, s2_logit_seq):
+        len_probs = np.asarray([self.softmax(x) for x in np.squeeze(len_logit_seq)])
+        s1_probs = np.asarray([self.softmax(x) for x in np.squeeze(s1_logit_seq)])
+        s2_probs = np.asarray([self.softmax(x) for x in np.squeeze(s2_logit_seq)])
+        print(str(s1_probs.shape))
+        print "len_probs", len_probs
+        plt.figure("len_probs")
+        plt.imshow(np.transpose(len_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+        plt.figure("s1_probs")
+        plt.imshow(np.transpose(s1_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+        plt.figure("s2_probs")
+        plt.imshow(np.transpose(s2_probs)[::-1,:], cmap='bone', interpolation='nearest')
+        plt.show()
+
+
+    def plotting(self):
+        idx = random.randint(0, self.N_SEQS - 1)
+        len_seq = [np.asarray(self.len_inputs[idx][j]) for j in range(self.SEQ_LEN + self.OFFSET + self.FORECAST_LEN)]
+        s1_seq = [np.asarray(self.s1_inputs[idx][j]) for j in range(self.SEQ_LEN + self.OFFSET + self.FORECAST_LEN)]
+        s2_seq = [np.asarray(self.s2_inputs[idx][j]) for j in range(self.SEQ_LEN + self.OFFSET + self.FORECAST_LEN)]
+
+        predictions = self.sample_forecast_logits_with_starter_seq(
+            len_seq[:self.SEQ_LEN], s1_seq[:self.SEQ_LEN], s2_seq[:self.SEQ_LEN])
+
+        self.plot_truth(len_seq[self.SEQ_LEN:], s1_seq[self.SEQ_LEN:], s2_seq[self.SEQ_LEN:])
+
+        self.plot_logits([p[0] for p in predictions], [p[1] for p in predictions], [p[2] for p in predictions])
+
 
 if __name__ == '__main__':
     model = dist_rnn(periodic=True, noise=False)
     model.restore()
+    model.plotting()

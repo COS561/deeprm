@@ -77,7 +77,10 @@ def main():
                       "ofile=",
                       "log=",
                       "render=",
-                      "unseen="])
+                      "unseen=",
+                      "experiment_name=",
+                      "amplitude=",
+                      "rnn="])
 
     except getopt.GetoptError:
         script_usage()
@@ -135,6 +138,12 @@ def main():
             render = (arg == 'True')
         elif opt in ("-u", "--unseen"):
             pa.generate_unseen = (arg == 'True')
+        elif opt in ("-en", "--experiment_name"):
+            pa.experiment_name = arg
+        elif opt in ("-a", "--amplitude"):
+            pa.amplitude = float(arg)
+        elif opt in ("-rnn", "--rnn"):
+            pa.rnn = (arg == 'True')
         else:
             script_usage()
             sys.exit()
